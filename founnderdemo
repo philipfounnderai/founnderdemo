@@ -1,0 +1,132 @@
+import Link from 'next/link';
+
+const films = [
+  {
+    slug: 'the-inventor',
+    title: 'The Inventor',
+    description:
+      "Garrett A. Morgan was a Cleveland-based, African-American inventor who most notably patented the three-signal traffic light and created a precursor to the modern gas mask. Set in 1916, this short film explores the business and moral dilemma Garrett faced after he and his brother Frank used an invention of Garrett’s own making to rescue miners trapped in an underground inferno, and were then left out of the story entirely.",
+    thumbnail: 'https://via.placeholder.com/400x250.png?text=The+Inventor',
+  },
+];
+
+export default function Home() {
+  return (
+    <div style={{ padding: '40px', fontFamily: 'sans-serif', background: '#fafbfc', minHeight: '100vh' }}>
+      <h1>Founnder.ai — Cinema as a Service™</h1>
+      <p>Watch films and meet the founders.</p>
+      <div style={{ display: 'flex', gap: '20px', marginTop: '30px' }}>
+        {films.map((film) => (
+          <Link
+            key={film.slug}
+            href={`/film/${film.slug}`}
+            style={{
+              textDecoration: 'none',
+              color: 'inherit',
+              maxWidth: 400,
+              borderRadius: 12,
+              overflow: 'hidden',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+              background: '#fff',
+              transition: 'transform 0.15s, box-shadow 0.15s',
+              display: 'block',
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+              e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.13)';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = '';
+              e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)';
+            }}
+          >
+            <img
+              src={film.thumbnail}
+              alt={film.title}
+              style={{
+                width: '100%',
+                display: 'block',
+                borderTopLeftRadius: 12,
+                borderTopRightRadius: 12,
+              }}
+            />
+            <div style={{ padding: '18px' }}>
+              <h3 style={{ margin: '0 0 10px' }}>{film.title}</h3>
+              <p style={{ margin: 0, color: '#444' }}>{film.description}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+
+const filmData = {
+  'the-inventor': {
+    title: 'The Inventor',
+    vimeoId: 'YOUR_VIMEO_ID_HERE', // Replace with your actual Vimeo ID
+    aiPersona:
+      "You are Garrett A. Morgan, the inventor featured in 'The Inventor.' Share your story, challenges, and insights about your inventions and the events of 1916.",
+  },
+};
+
+export default function FilmPage() {
+  const router = useRouter();
+  const { slug } = router.query;
+  const film = filmData[slug];
+
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+
+  const sendMessage = async () => {
+    if (!input) return;
+
+    const userMessage = { role: 'user', content: input };
+    setMessages([...messages, userMessage]);
+
+    const res = await fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona: film.aiPersona, message: input }),
+    });
+
+    const data = await res.json();
+    const aiMessage = { role: 'ai', content: data.reply };
+
+    setMessages((prev) => [...prev, aiMessage]);
+    setInput('');
+  };
+
+  if (!film) return <p>Loading...</p>;
+
+  return (
+    <div style={{ padding: '40px', fontFamily: 'sans-serif' }}>
+      <h1>{film.title}</h1>
+      <iframe
+        src={`https://player.vimeo.com/video/${film.vimeoId}`}
+        width="640"
+        height="360"
+        frameBorder="0"
+        allow="fullscreen"
+        style={{ marginBottom: '30px' }}
+      ></iframe>
+
+      <h3 style={{ marginTop: '30px' }}>Ask the Founder</h3>
+      <div style={{ border: '1px solid #ccc', padding: '20px', maxHeight: '300px', overflowY: 'scroll', marginBottom: '10px' }}>
+        {messages.map((m, idx) => (
+          <p key={idx}><strong>{m.role === 'user' ? 'You' : 'Founder'}:</strong> {m.content}</p>
+        ))}
+      </div>
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Ask a question..."
+        style={{ width: '80%', padding: '10px', marginTop: '10px' }}
+      />
+      <button onClick={sendMessage} style={{ padding: '10px' }}>Send</button>
+    </div>
+  );
+}
